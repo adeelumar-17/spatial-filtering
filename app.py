@@ -118,30 +118,7 @@ def normalize_for_display(image):
         return cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return image
 
-def create_comparison_plot(images, titles, cols=3):
-    """Create a comparison plot of multiple images"""
-    rows = (len(images) + cols - 1) // cols
-    fig, axes = plt.subplots(rows, cols, figsize=(15, 5*rows))
-    
-    if rows == 1:
-        axes = axes.reshape(1, -1) if len(images) > 1 else [axes]
-    
-    for i, (img, title) in enumerate(zip(images, titles)):
-        row, col = i // cols, i % cols
-        ax = axes[row][col] if rows > 1 else axes[col]
-        
-        ax.imshow(normalize_for_display(img), cmap='gray')
-        ax.set_title(title, fontsize=12, fontweight='bold')
-        ax.axis('off')
-    
-    # Hide unused subplots
-    for i in range(len(images), rows * cols):
-        row, col = i // cols, i % cols
-        ax = axes[row][col] if rows > 1 else axes[col]
-        ax.axis('off')
-    
-    plt.tight_layout()
-    return fig
+
 
 # Main App
 st.markdown('<h1 class="main-header">🔍 Spatial Filtering Application</h1>', unsafe_allow_html=True)
