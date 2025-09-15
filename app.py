@@ -88,7 +88,6 @@ def apply_smoothing_filter(image, filter_type, kernel_size=3):
         pad = kernel_size // 2
         padded = np.pad(image, pad, mode="edge")
         out = np.zeros_like(image)
-        # Optimized mode filtering
         for i in range(image.shape[0]):
             for j in range(image.shape[1]):
                 window = padded[i:i+kernel_size, j:j+kernel_size].ravel()
@@ -169,19 +168,21 @@ if uploaded:
 
     if st.sidebar.button("🚀 Apply"):
         with st.spinner("Processing image..."):
+            original = arr  # keep original image
+
             if mode=="Individual":
                 if ftype=="First-Order":
                     filt = apply_first_order_filter(proc_img, f1)
-                    imgs = [proc_img, filt]
-                    titles = ["Preprocessed", f1]
+                    imgs = [original, proc_img, filt]
+                    titles = ["Original", "Preprocessed", f1]
                 else:
                     filt = apply_second_order_filter(proc_img, f2)
-                    imgs = [proc_img, filt]
-                    titles = ["Preprocessed", f2]
+                    imgs = [original, proc_img, filt]
+                    titles = ["Original", "Preprocessed", f2]
             else:
                 comb, f1r, f2r = combine_filters(proc_img, f1, f2, method)
-                imgs = [proc_img, f1r, f2r, comb]
-                titles = ["Preprocessed", f1, f2, f"Combined ({method})"]
+                imgs = [original, proc_img, f1r, f2r, comb]
+                titles = ["Original", "Preprocessed", f1, f2, f"Combined ({method})"]
                 filt = comb
 
             if smoothing != "None":
