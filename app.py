@@ -3,32 +3,16 @@ import cv2
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
-from io import BytesIO
-from scipy import stats
 
 # -------------------------
-# Page configuration
+# Page Configuration
 # -------------------------
 st.set_page_config(
-    page_title="Spatial Filtering App",
+    page_title="Spatial Filtering & Smoothing",
     page_icon="🔍",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-# -------------------------
-# Custom CSS
-# -------------------------
-st.markdown("""
-<style>
-    .main-header {
-        font-size: 2.5rem;
-        color: #2E86AB;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-</style>
-""", unsafe_allow_html=True)
 
 # -------------------------
 # Utility Functions
@@ -103,13 +87,14 @@ def apply_smoothing_filter(image, filter_type, kernel_size=3):
     elif filter_type == "Mode":
         pad = kernel_size // 2
         padded = np.pad(image, pad, mode="edge")
-        mode_img = np.zeros_like(image)
+        out = np.zeros_like(image)
+        # Optimized mode filtering
         for i in range(image.shape[0]):
             for j in range(image.shape[1]):
-                window = padded[i:i+kernel_size, j:j+kernel_size].flatten()
-                mode_val = stats.mode(window, keepdims=True)[0][0]
-                mode_img[i,j] = mode_val
-        return mode_img
+                window = padded[i:i+kernel_size, j:j+kernel_size].ravel()
+                counts = np.bincount(window)
+                out[i, j] = np.argmax(counts)
+        return out
     return image
 
 def normalize_for_display(image):
@@ -124,7 +109,7 @@ def create_comparison_plot(images, titles):
     fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 5*rows))
     axes = np.array(axes).reshape(-1)
     for ax, img, title in zip(axes, images, titles):
-        ax.imshow(normalize_for_display(img), cmap='gray')
+        ax.imshow(normalize_for_display(img), cmap="gray")
         ax.set_title(title)
         ax.axis("off")
     for ax in axes[n:]:
@@ -135,42 +120,55 @@ def create_comparison_plot(images, titles):
 # -------------------------
 # Main App
 # -------------------------
-st.markdown('<h1 class="main-header">🔍 Spatial Filtering with Smoothing</h1>', unsafe_allow_html=True)
+st.markdown('<h1 style="text-align:center; color:#2E86AB;">🔍 Spatial Filtering & Smoothing</h1>', unsafe_allow_html=True)
 
 with st.sidebar:
-    st.header("Upload & Settings")
+    st.header("⚙️ Settings")
     uploaded = st.file_uploader("Upload an Image", type=['png','jpg','jpeg'])
-    if uploaded:
-        image = Image.open(uploaded)
-        arr = np.array(image)
-        st.image(image, caption="Original", use_column_width=True)
-        preproc = st.selectbox("Preprocess", ["Grayscale","Black & White","Keep Original"])
-        if preproc=="Black & White":
-            th = st.slider("Threshold", 0,255,127)
-        
-        if preproc=="Grayscale":
-            proc_img = convert_to_grayscale(arr)
-        elif preproc=="Black & White":
-            proc_img = convert_to_bw(arr, th)
-        else:
-            proc_img = convert_to_grayscale(arr)
-        
-        mode = st.radio("Filter Mode", ["Individual","Combined"])
-        if mode=="Individual":
-            ftype = st.selectbox("Filter Type", ["First-Order","Second-Order"])
-            if ftype=="First-Order":
-                f1 = st.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
-            else:
-                f2 = st.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
-        else:
-            f1 = st.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
-            f2 = st.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
-            method = st.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
-        
-        smoothing = st.selectbox("Apply Smoothing Filter", ["None","Mean","Median","Mode"])
-        ksize = st.slider("Kernel Size", 3,9,3, step=2)
+    reset = st.button("🔄 Reset App")
 
-        if st.button("🚀 Apply"):
+# Reset functionality
+if reset:
+    st.session_state.clear()
+    st.rerun()
+
+if uploaded:
+    image = Image.open(uploaded)
+    arr = np.array(image)
+
+    # Preprocessing
+    preproc = st.sidebar.selectbox("Preprocessing", ["Grayscale","Black & White","Keep Original"])
+    if preproc=="Black & White":
+        th = st.sidebar.slider("Threshold", 0,255,127)
+    
+    if preproc=="Grayscale":
+        proc_img = convert_to_grayscale(arr)
+    elif preproc=="Black & White":
+        proc_img = convert_to_bw(arr, th)
+    else:
+        proc_img = convert_to_grayscale(arr)
+
+    # Filtering Options
+    st.sidebar.markdown("### 🔹 Filtering")
+    mode = st.sidebar.radio("Filter Mode", ["Individual","Combined"])
+    if mode=="Individual":
+        ftype = st.sidebar.selectbox("Filter Type", ["First-Order","Second-Order"])
+        if ftype=="First-Order":
+            f1 = st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
+        else:
+            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+    else:
+        f1 = st.sidebar.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
+        f2 = st.sidebar.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+        method = st.sidebar.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
+
+    # Smoothing
+    st.sidebar.markdown("### 🔹 Smoothing")
+    smoothing = st.sidebar.selectbox("Apply Smoothing", ["None","Mean","Median","Mode"])
+    ksize = st.sidebar.slider("Kernel Size", 3,9,3, step=2)
+
+    if st.sidebar.button("🚀 Apply"):
+        with st.spinner("Processing image..."):
             if mode=="Individual":
                 if ftype=="First-Order":
                     filt = apply_first_order_filter(proc_img, f1)
@@ -192,4 +190,10 @@ with st.sidebar:
                 titles.append(f"{smoothing} Smoothing")
 
             fig = create_comparison_plot(imgs, titles)
-            st.pyplot(fig)
+
+            # Center the output
+            col_left, col_center, col_right = st.columns([1,3,1])
+            with col_center:
+                st.pyplot(fig)
+else:
+    st.info("👆 Upload an image to get started!")
