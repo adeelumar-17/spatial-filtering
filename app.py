@@ -234,11 +234,10 @@ with st.sidebar:
             )
         
         # Process button
-        if st.button("🚀 Apply Filters", type="primary"):
-            st.session_state.process_filters = True
+        process_button = st.button("🚀 Apply Filters", type="primary", key="sidebar_process")
 
 # Main content area
-if uploaded_file is not None and st.sidebar.button("🚀 Apply Filters", type="primary"):
+if uploaded_file is not None and process_button:
     
     col1, col2 = st.columns([1, 2])
     
@@ -350,5 +349,5 @@ if uploaded_file is None:
 st.markdown("---")
 st.markdown(
     "Made with ❤️ using Streamlit | "
-    "Computer Vision Spatial Filtering Assignments"
+    "Perfect for Computer Vision Spatial Filtering Assignments"
 )
