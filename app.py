@@ -4,9 +4,10 @@ import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
 from io import BytesIO
-import base64
 
-# Set page configuration
+# -------------------------
+# Page configuration
+# -------------------------
 st.set_page_config(
     page_title="Spatial Filtering App",
     page_icon="🔍",
@@ -14,7 +15,9 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# -------------------------
+# Custom CSS
+# -------------------------
 st.markdown("""
 <style>
     .main-header {
@@ -38,6 +41,9 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# -------------------------
+# Utility Functions
+# -------------------------
 def convert_to_grayscale(image):
     """Convert image to grayscale"""
     if len(image.shape) == 3:
@@ -80,7 +86,6 @@ def apply_second_order_filter(image, filter_type):
     if filter_type == "Laplacian":
         return cv2.Laplacian(image, cv2.CV_64F)
     elif filter_type == "Laplacian of Gaussian (LoG)":
-        # First apply Gaussian blur, then Laplacian
         blurred = cv2.GaussianBlur(image, (5, 5), 1.0)
         return cv2.Laplacian(blurred, cv2.CV_64F)
     elif filter_type == "Custom Laplacian (4-connected)":
@@ -97,7 +102,6 @@ def combine_filters(image, first_order_type, second_order_type, combination_meth
     first_result = apply_first_order_filter(image, first_order_type)
     second_result = apply_second_order_filter(image, second_order_type)
     
-    # Normalize both results to same range
     first_norm = cv2.normalize(first_result, None, 0, 255, cv2.NORM_MINMAX)
     second_norm = cv2.normalize(second_result, None, 0, 255, cv2.NORM_MINMAX)
     
@@ -118,9 +122,32 @@ def normalize_for_display(image):
         return cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return image
 
+def create_comparison_plot(images, titles):
+    """Create side-by-side plots for images with titles"""
+    num_images = len(images)
+    
+    # Arrange in rows of max 3 per row
+    cols = 3 if num_images > 3 else num_images
+    rows = int(np.ceil(num_images / cols))
+    
+    fig, axes = plt.subplots(rows, cols, figsize=(5 * cols, 5 * rows))
+    axes = np.array(axes).reshape(-1)  # Flatten axes
+    
+    for ax, img, title in zip(axes, images, titles):
+        ax.imshow(normalize_for_display(img), cmap='gray')
+        ax.set_title(title)
+        ax.axis('off')
+    
+    # Hide any extra axes
+    for ax in axes[len(images):]:
+        ax.axis('off')
+    
+    plt.tight_layout()
+    return fig
 
-
+# -------------------------
 # Main App
+# -------------------------
 st.markdown('<h1 class="main-header">🔍 Spatial Filtering Application</h1>', unsafe_allow_html=True)
 
 st.markdown("""
@@ -130,11 +157,10 @@ This application allows you to experiment with various spatial filtering techniq
 - **Combinations**: Merge different filtering approaches
 """)
 
-# Sidebar for controls
+# Sidebar
 with st.sidebar:
     st.header("🎛️ Filter Controls")
     
-    # Image upload
     uploaded_file = st.file_uploader(
         "Upload an Image",
         type=['png', 'jpg', 'jpeg', 'bmp', 'tiff'],
@@ -142,44 +168,33 @@ with st.sidebar:
     )
     
     if uploaded_file is not None:
-        # Load and display original image
         image = Image.open(uploaded_file)
         image_array = np.array(image)
         
         st.image(image, caption="Original Image", use_column_width=True)
         
-        # Image preprocessing options
+        # Preprocessing
         st.subheader("1️⃣ Image Preprocessing")
         conversion_type = st.selectbox(
             "Convert Image:",
             ["Keep Original", "Grayscale", "Black & White"]
         )
-        
         if conversion_type == "Black & White":
             bw_threshold = st.slider("B&W Threshold", 0, 255, 127)
         
-        # Apply preprocessing
         if conversion_type == "Grayscale":
             processed_image = convert_to_grayscale(image_array)
         elif conversion_type == "Black & White":
             processed_image = convert_to_bw(image_array, bw_threshold)
         else:
-            processed_image = convert_to_grayscale(image_array)  # Convert to grayscale for filtering
+            processed_image = convert_to_grayscale(image_array)
         
-        # Filter selection
+        # Filters
         st.subheader("2️⃣ Filter Selection")
-        
-        filter_mode = st.radio(
-            "Choose Filter Mode:",
-            ["Individual Filters", "Combined Filters"]
-        )
+        filter_mode = st.radio("Choose Filter Mode:", ["Individual Filters", "Combined Filters"])
         
         if filter_mode == "Individual Filters":
-            filter_type = st.selectbox(
-                "Select Filter Type:",
-                ["First-Order Derivative", "Second-Order Derivative"]
-            )
-            
+            filter_type = st.selectbox("Select Filter Type:", ["First-Order Derivative", "Second-Order Derivative"])
             if filter_type == "First-Order Derivative":
                 first_order_filter = st.selectbox(
                     "First-Order Filter:",
@@ -192,30 +207,25 @@ with st.sidebar:
                     ["Laplacian", "Laplacian of Gaussian (LoG)", 
                      "Custom Laplacian (4-connected)", "Custom Laplacian (8-connected)"]
                 )
-        
-        else:  # Combined Filters
+        else:
             first_order_filter = st.selectbox(
                 "First-Order Filter:",
                 ["Sobel X", "Sobel Y", "Sobel Combined", "Prewitt X", "Prewitt Y"]
             )
-            
             second_order_filter = st.selectbox(
                 "Second-Order Filter:",
                 ["Laplacian", "Laplacian of Gaussian (LoG)", 
                  "Custom Laplacian (4-connected)", "Custom Laplacian (8-connected)"]
             )
-            
             combination_method = st.selectbox(
                 "Combination Method:",
                 ["Add", "Multiply", "Maximum", "Subtract"]
             )
         
-        # Process button
         process_button = st.button("🚀 Apply Filters", type="primary", key="sidebar_process")
 
-# Main content area
+# Processing and results
 if uploaded_file is not None and process_button:
-    
     col1, col2 = st.columns([1, 2])
     
     with col1:
@@ -237,7 +247,6 @@ if uploaded_file is not None and process_button:
     with col2:
         st.subheader("🖼️ Results")
         
-        # Apply filters and create visualizations
         if filter_mode == "Individual Filters":
             if filter_type == "First-Order Derivative":
                 filtered_image = apply_first_order_filter(processed_image, first_order_filter)
@@ -252,79 +261,53 @@ if uploaded_file is not None and process_button:
                 processed_image, first_order_filter, second_order_filter, combination_method
             )
             images = [processed_image, first_result, second_result, combined_image]
-            titles = ["Preprocessed", f"{first_order_filter}", f"{second_order_filter}", 
-                     f"Combined ({combination_method})"]
+            titles = ["Preprocessed", f"{first_order_filter}", f"{second_order_filter}", f"Combined ({combination_method})"]
         
-        # Create and display comparison plot
         fig = create_comparison_plot(images, titles)
         st.pyplot(fig)
         
-        # Download processed images
+        # Download button
         st.subheader("💾 Download Results")
-        
         if filter_mode == "Individual Filters":
-            # Create download button for the filtered image
             filtered_normalized = normalize_for_display(filtered_image)
             img_buffer = BytesIO()
             Image.fromarray(filtered_normalized).save(img_buffer, format='PNG')
-            
             st.download_button(
                 label="📥 Download Filtered Image",
                 data=img_buffer.getvalue(),
-                file_name=f"filtered_image_{filter_type.replace(' ', '_').lower()}.png",
+                file_name=f"filtered_image.png",
                 mime="image/png"
             )
         else:
-            # Create download button for combined image
             combined_normalized = normalize_for_display(combined_image)
             img_buffer = BytesIO()
             Image.fromarray(combined_normalized).save(img_buffer, format='PNG')
-            
             st.download_button(
                 label="📥 Download Combined Image",
                 data=img_buffer.getvalue(),
-                file_name=f"combined_filter_{combination_method.lower()}.png",
+                file_name=f"combined_filter.png",
                 mime="image/png"
             )
 
-# Information section
+# Info section
 if uploaded_file is None:
     st.info("👆 Please upload an image using the sidebar to get started!")
     
-    # Educational content
-    st.subheader("📚 About Spatial Filtering")
-    
     col1, col2 = st.columns(2)
-    
     with col1:
         st.markdown("""
         **First-Order Derivatives (Edge Detection):**
-        - **Sobel**: Emphasizes edges in X or Y direction
-        - **Prewitt**: Similar to Sobel but with different kernel weights
-        - **Roberts**: Simple cross-gradient operator
-        
-        **Applications:**
-        - Object boundary detection
-        - Feature extraction
-        - Image segmentation
+        - Sobel: Emphasizes edges in X or Y direction
+        - Prewitt: Similar to Sobel but simpler
+        - Roberts: Detects diagonal edges
         """)
-    
     with col2:
         st.markdown("""
         **Second-Order Derivatives (Detail Enhancement):**
-        - **Laplacian**: Detects rapid intensity changes
-        - **LoG**: Combines Gaussian smoothing with Laplacian
-        - **Custom Kernels**: Different connectivity patterns
-        
-        **Applications:**
-        - Fine detail enhancement
-        - Noise amplification
-        - Zero-crossing edge detection
+        - Laplacian: Detects rapid intensity changes
+        - LoG: Gaussian smoothing + Laplacian
+        - Custom kernels: 4-connected / 8-connected
         """)
 
-# Footer
 st.markdown("---")
-st.markdown(
-    "Made with ❤️ using Streamlit | "
-    "Perfect for Computer Vision Spatial Filtering Assignments"
-)
+st.markdown("Made with ❤️ using Streamlit | Perfect for Computer Vision Spatial Filtering Assignments")
