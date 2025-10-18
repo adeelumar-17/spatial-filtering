@@ -121,36 +121,24 @@ def create_comparison_plot(images, titles):
 # -------------------------
 
 def sharpen_laplacian(image):
-    # Ensure the image is in uint8 format
     image = np.array(image, dtype=np.uint8)
-    
-    # Apply the Laplacian filter
     laplacian = cv2.Laplacian(image, cv2.CV_64F)
-    
-    # Convert the Laplacian result to uint8 for consistent data type
     laplacian = cv2.convertScaleAbs(laplacian)
-    
-    # Add the Laplacian to the original image
     sharpened = cv2.add(image, laplacian)
-    
     return sharpened
 
-
 def sharpen_highpass(image):
-    # Apply High-pass filtering
     blurred = cv2.GaussianBlur(image, (5, 5), 0)
     highpass = cv2.subtract(image, blurred)
     return highpass
 
 def sharpen_unsharp(image):
-    # Apply Unsharp Masking
     blurred = cv2.GaussianBlur(image, (5, 5), 0)
     unsharp = cv2.subtract(image, blurred)
     sharpened = cv2.addWeighted(image, 1.5, unsharp, -0.5, 0)
     return sharpened
 
 def sharpen_kernel(image):
-    # Apply a simple kernel sharpening filter
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
     return cv2.filter2D(image, -1, kernel)
 
@@ -185,20 +173,6 @@ if uploaded:
     else:
         proc_img = convert_to_grayscale(arr)
 
-    # Filtering Options
-    st.sidebar.markdown("### 🔹 Filtering")
-    mode = st.sidebar.radio("Filter Mode", ["Individual","Combined"])
-    if mode=="Individual":
-        ftype = st.sidebar.selectbox("Filter Type", ["First-Order","Second-Order"])
-        if ftype=="First-Order":
-            f1 = st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
-        else:
-            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
-    else:
-        f1 = st.sidebar.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
-        f2 = st.sidebar.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
-        method = st.sidebar.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
-
     # Sharpening
     st.sidebar.markdown("### 🔹 Sharpening")
     sharpen_method = st.sidebar.selectbox("Sharpening Method", ["None", "Laplacian", "High-pass", "Unsharp Masking", "Kernel"])
@@ -207,6 +181,27 @@ if uploaded:
     st.sidebar.markdown("### 🔹 Smoothing")
     smoothing = st.sidebar.selectbox("Apply Smoothing", ["None","Mean","Median","Mode"])
     ksize = st.sidebar.slider("Kernel Size", 3,9,3, step=2)
+
+    # Hide filter options when sharpening is selected
+    if sharpen_method != "None":
+        st.sidebar.markdown("### 🔹 Filtering (Hidden)")
+        st.sidebar.selectbox("Filter Mode", ["Individual","Combined"], disabled=True)
+        st.sidebar.selectbox("Filter Type", ["First-Order","Second-Order"], disabled=True)
+        st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"], disabled=True)
+        st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"], disabled=True)
+    else:
+        # Show filter options only if sharpen method is 'None'
+        mode = st.sidebar.radio("Filter Mode", ["Individual","Combined"])
+        if mode=="Individual":
+            ftype = st.sidebar.selectbox("Filter Type", ["First-Order","Second-Order"])
+            if ftype=="First-Order":
+                f1 = st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
+            else:
+                f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+        else:
+            f1 = st.sidebar.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
+            f2 = st.sidebar.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+            method = st.sidebar.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
 
     if st.sidebar.button("🚀 Apply"):
         with st.spinner("Processing image..."):
@@ -224,7 +219,7 @@ if uploaded:
             else:
                 sharpened_image = proc_img  # No sharpening
 
-            # Ensure the sharpened image is RGB (if grayscale)
+            # Convert sharpened image to RGB if grayscale
             if len(sharpened_image.shape) == 2:  # If grayscale (2D), convert to RGB
                 sharpened_image = cv2.cvtColor(sharpened_image, cv2.COLOR_GRAY2RGB)
 
