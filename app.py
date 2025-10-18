@@ -117,57 +117,42 @@ def create_comparison_plot(images, titles):
     return fig
 
 # -------------------------
-# Sharpening Functions (Updated for RGB output)
+# Sharpening Functions
 # -------------------------
 
 def sharpen_laplacian(image):
-    # Ensure the image is in uint8 format and is in RGB
+    # Ensure the image is in uint8 format
     image = np.array(image, dtype=np.uint8)
     
-    # If the image is RGB, convert to grayscale for Laplacian processing
-    gray = cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
-
-    # Apply the Laplacian filter (on grayscale)
-    laplacian = cv2.Laplacian(gray, cv2.CV_64F)
+    # Apply the Laplacian filter
+    laplacian = cv2.Laplacian(image, cv2.CV_64F)
     
     # Convert the Laplacian result to uint8 for consistent data type
     laplacian = cv2.convertScaleAbs(laplacian)
     
-    # Add the Laplacian to the original RGB image (color sharpening)
-    sharpened = cv2.add(image, cv2.cvtColor(laplacian, cv2.COLOR_GRAY2RGB))
+    # Add the Laplacian to the original image
+    sharpened = cv2.add(image, laplacian)
     
     return sharpened
 
+
 def sharpen_highpass(image):
-    # Ensure the image is in uint8 format and is in RGB
-    image = np.array(image, dtype=np.uint8)
-    
-    # Apply High-pass filtering (on RGB image)
+    # Apply High-pass filtering
     blurred = cv2.GaussianBlur(image, (5, 5), 0)
     highpass = cv2.subtract(image, blurred)
-    
     return highpass
 
 def sharpen_unsharp(image):
-    # Ensure the image is in uint8 format and is in RGB
-    image = np.array(image, dtype=np.uint8)
-    
-    # Apply Unsharp Masking (on RGB image)
+    # Apply Unsharp Masking
     blurred = cv2.GaussianBlur(image, (5, 5), 0)
     unsharp = cv2.subtract(image, blurred)
     sharpened = cv2.addWeighted(image, 1.5, unsharp, -0.5, 0)
-    
     return sharpened
 
 def sharpen_kernel(image):
-    # Ensure the image is in uint8 format and is in RGB
-    image = np.array(image, dtype=np.uint8)
-    
-    # Apply a simple kernel sharpening filter (on RGB image)
+    # Apply a simple kernel sharpening filter
     kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
-    sharpened = cv2.filter2D(image, -1, kernel)
-    
-    return sharpened
+    return cv2.filter2D(image, -1, kernel)
 
 # -------------------------
 # Main App
@@ -198,7 +183,21 @@ if uploaded:
     elif preproc=="Black & White":
         proc_img = convert_to_bw(arr, th)
     else:
-        proc_img = arr  # Keep Original in RGB
+        proc_img = convert_to_grayscale(arr)
+
+    # Filtering Options
+    st.sidebar.markdown("### 🔹 Filtering")
+    mode = st.sidebar.radio("Filter Mode", ["Individual","Combined"])
+    if mode=="Individual":
+        ftype = st.sidebar.selectbox("Filter Type", ["First-Order","Second-Order"])
+        if ftype=="First-Order":
+            f1 = st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
+        else:
+            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+    else:
+        f1 = st.sidebar.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
+        f2 = st.sidebar.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+        method = st.sidebar.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
 
     # Sharpening
     st.sidebar.markdown("### 🔹 Sharpening")
@@ -225,10 +224,10 @@ if uploaded:
             else:
                 sharpened_image = proc_img  # No sharpening
 
-            # Make sure the sharpened image is RGB
-            if sharpened_image.shape[2] == 1:  # If grayscale, convert to RGB
+            # Ensure the sharpened image is RGB (if grayscale)
+            if len(sharpened_image.shape) == 2:  # If grayscale (2D), convert to RGB
                 sharpened_image = cv2.cvtColor(sharpened_image, cv2.COLOR_GRAY2RGB)
-            
+
             imgs = [original, proc_img, sharpened_image]
             titles = ["Original", "Preprocessed", f"Sharpened ({sharpen_method})"]
 
