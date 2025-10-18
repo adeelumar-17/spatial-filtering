@@ -104,6 +104,37 @@ def normalize_for_display(image):
 
 def create_image_download_link(image, filename="image.png"):
     """Generate a link to download an image."""
+    # Ensure image is in uint8 format for saving
+    if image.dtype != np.uint8:
+        image = normalize_for_display(image)
+
+    pil_img = Image.fromarray(image)
+    img_byte_arr = BytesIO()
+    pil_img.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    b64 = base64.b64encode(img_byte_arr).decode()
+    href = f'<a href="data:file/png;base64,{b64}" download="{filename}">Download {filename}</a>'
+    return href
+# -------------------------
+# Utility Functions
+# -------------------------
+def convert_to_grayscale(image):
+    if len(image.shape) == 3:
+        return cv2.cvtColor(image, cv2.COLOR_RGB2GRAY)
+    return image
+
+def convert_to_bw(image, threshold=127):
+    gray = convert_to_grayscale(image)
+    _, bw = cv2.threshold(gray, threshold, 255, cv2.THRESH_BINARY)
+    return bw
+
+def normalize_for_display(image):
+    if image.dtype != np.uint8:
+        return cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
+    return image
+
+def create_image_download_link(image, filename="image.png"):
+    """Generate a link to download an image."""
     pil_img = Image.fromarray(image)
     img_byte_arr = BytesIO()
     pil_img.save(img_byte_arr, format='PNG')
@@ -219,6 +250,7 @@ if uploaded:
             if len(sharpened_image.shape) == 2:  # If grayscale (2D), convert to RGB
                 sharpened_image = cv2.cvtColor(sharpened_image, cv2.COLOR_GRAY2RGB)
 
+            # Prepare images for display
             imgs = [original, proc_img, sharpened_image]
             titles = ["Original", "Preprocessed", f"Sharpened ({sharpen_method})"]
 
