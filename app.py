@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from PIL import Image
 import matplotlib.pyplot as plt
+from io import BytesIO
 
 # -------------------------
 # Page Configuration
@@ -101,20 +102,15 @@ def normalize_for_display(image):
         return cv2.normalize(image, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8)
     return image
 
-def create_comparison_plot(images, titles):
-    n = len(images)
-    cols = 3 if n > 3 else n
-    rows = int(np.ceil(n/cols))
-    fig, axes = plt.subplots(rows, cols, figsize=(5*cols, 5*rows))
-    axes = np.array(axes).reshape(-1)
-    for ax, img, title in zip(axes, images, titles):
-        ax.imshow(normalize_for_display(img), cmap="gray")
-        ax.set_title(title)
-        ax.axis("off")
-    for ax in axes[n:]:
-        ax.axis("off")
-    plt.tight_layout()
-    return fig
+def create_image_download_link(image, filename="image.png"):
+    """Generate a link to download an image."""
+    pil_img = Image.fromarray(image)
+    img_byte_arr = BytesIO()
+    pil_img.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+    b64 = base64.b64encode(img_byte_arr).decode()
+    href = f'<a href="data:file/png;base64,{b64}" download="{filename}">Download {filename}</a>'
+    return href
 
 # -------------------------
 # Sharpening Functions
@@ -232,12 +228,13 @@ if uploaded:
                 imgs.append(smooth)
                 titles.append(f"{smoothing} Smoothing")
 
-            # Plotting comparison
-            fig = create_comparison_plot(imgs, titles)
+            # Display images individually for saving
+            col_left, col_center, col_right = st.columns(3)
+            for i, img in enumerate(imgs):
+                with col_center:
+                    st.image(img, caption=titles[i], use_column_width=True)
+                    # Add a download button for each image
+                    st.markdown(create_image_download_link(img, f"{titles[i]}.png"), unsafe_allow_html=True)
 
-            # Center the output
-            col_left, col_center, col_right = st.columns([1,3,1])
-            with col_center:
-                st.pyplot(fig)
 else:
     st.info("👆 Upload an image to get started!")
