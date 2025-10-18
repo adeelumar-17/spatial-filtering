@@ -117,6 +117,33 @@ def create_comparison_plot(images, titles):
     return fig
 
 # -------------------------
+# Sharpening Functions
+# -------------------------
+
+def sharpen_laplacian(image):
+    # Apply Laplacian filter for sharpening
+    laplacian = cv2.Laplacian(image, cv2.CV_64F)
+    return cv2.add(image, laplacian)
+
+def sharpen_highpass(image):
+    # Apply High-pass filtering
+    blurred = cv2.GaussianBlur(image, (5, 5), 0)
+    highpass = cv2.subtract(image, blurred)
+    return highpass
+
+def sharpen_unsharp(image):
+    # Apply Unsharp Masking
+    blurred = cv2.GaussianBlur(image, (5, 5), 0)
+    unsharp = cv2.subtract(image, blurred)
+    sharpened = cv2.addWeighted(image, 1.5, unsharp, -0.5, 0)
+    return sharpened
+
+def sharpen_kernel(image):
+    # Apply a simple kernel sharpening filter
+    kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]])
+    return cv2.filter2D(image, -1, kernel)
+
+# -------------------------
 # Main App
 # -------------------------
 st.markdown('<h1 style="text-align:center; color:#2E86AB;">🔍 Spatial Filtering & Smoothing</h1>', unsafe_allow_html=True)
@@ -155,46 +182,4 @@ if uploaded:
         if ftype=="First-Order":
             f1 = st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
         else:
-            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
-    else:
-        f1 = st.sidebar.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
-        f2 = st.sidebar.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
-        method = st.sidebar.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
-
-    # Smoothing
-    st.sidebar.markdown("### 🔹 Smoothing")
-    smoothing = st.sidebar.selectbox("Apply Smoothing", ["None","Mean","Median","Mode"])
-    ksize = st.sidebar.slider("Kernel Size", 3,9,3, step=2)
-
-    if st.sidebar.button("🚀 Apply"):
-        with st.spinner("Processing image..."):
-            original = arr  # keep original image
-
-            if mode=="Individual":
-                if ftype=="First-Order":
-                    filt = apply_first_order_filter(proc_img, f1)
-                    imgs = [original, proc_img, filt]
-                    titles = ["Original", "Preprocessed", f1]
-                else:
-                    filt = apply_second_order_filter(proc_img, f2)
-                    imgs = [original, proc_img, filt]
-                    titles = ["Original", "Preprocessed", f2]
-            else:
-                comb, f1r, f2r = combine_filters(proc_img, f1, f2, method)
-                imgs = [original, proc_img, f1r, f2r, comb]
-                titles = ["Original", "Preprocessed", f1, f2, f"Combined ({method})"]
-                filt = comb
-
-            if smoothing != "None":
-                smooth = apply_smoothing_filter(normalize_for_display(filt), smoothing, ksize)
-                imgs.append(smooth)
-                titles.append(f"{smoothing} Smoothing")
-
-            fig = create_comparison_plot(imgs, titles)
-
-            # Center the output
-            col_left, col_center, col_right = st.columns([1,3,1])
-            with col_center:
-                st.pyplot(fig)
-else:
-    st.info("👆 Upload an image to get started!")
+            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected
