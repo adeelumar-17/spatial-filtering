@@ -182,4 +182,52 @@ if uploaded:
         if ftype=="First-Order":
             f1 = st.sidebar.selectbox("First-Order Filter", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y","Roberts X","Roberts Y"])
         else:
-            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected
+            f2 = st.sidebar.selectbox("Second-Order Filter", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+    else:
+        f1 = st.sidebar.selectbox("First-Order", ["Sobel X","Sobel Y","Sobel Combined","Prewitt X","Prewitt Y"])
+        f2 = st.sidebar.selectbox("Second-Order", ["Laplacian","Laplacian of Gaussian (LoG)","Custom Laplacian (4-connected)","Custom Laplacian (8-connected)"])
+        method = st.sidebar.selectbox("Combination", ["Add","Multiply","Maximum","Subtract"])
+
+    # Sharpening
+    st.sidebar.markdown("### 🔹 Sharpening")
+    sharpen_method = st.sidebar.selectbox("Sharpening Method", ["None", "Laplacian", "High-pass", "Unsharp Masking", "Kernel"])
+
+    # Smoothing
+    st.sidebar.markdown("### 🔹 Smoothing")
+    smoothing = st.sidebar.selectbox("Apply Smoothing", ["None","Mean","Median","Mode"])
+    ksize = st.sidebar.slider("Kernel Size", 3,9,3, step=2)
+
+    if st.sidebar.button("🚀 Apply"):
+        with st.spinner("Processing image..."):
+            original = arr  # keep original image
+
+            # Sharpening
+            if sharpen_method == "Laplacian":
+                sharpened_image = sharpen_laplacian(proc_img)
+            elif sharpen_method == "High-pass":
+                sharpened_image = sharpen_highpass(proc_img)
+            elif sharpen_method == "Unsharp Masking":
+                sharpened_image = sharpen_unsharp(proc_img)
+            elif sharpen_method == "Kernel":
+                sharpened_image = sharpen_kernel(proc_img)
+            else:
+                sharpened_image = proc_img  # No sharpening
+
+            imgs = [original, proc_img, sharpened_image]
+            titles = ["Original", "Preprocessed", f"Sharpened ({sharpen_method})"]
+
+            # Smoothing
+            if smoothing != "None":
+                smooth = apply_smoothing_filter(normalize_for_display(sharpened_image), smoothing, ksize)
+                imgs.append(smooth)
+                titles.append(f"{smoothing} Smoothing")
+
+            # Plotting comparison
+            fig = create_comparison_plot(imgs, titles)
+
+            # Center the output
+            col_left, col_center, col_right = st.columns([1,3,1])
+            with col_center:
+                st.pyplot(fig)
+else:
+    st.info("👆 Upload an image to get started!")
