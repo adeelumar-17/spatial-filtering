@@ -112,9 +112,12 @@ def create_image_download_link(image, filename="image.png"):
     img_byte_arr = BytesIO()
     pil_img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
+    
+    # Encode image as base64 to create the download link
     b64 = base64.b64encode(img_byte_arr).decode()
     href = f'<a href="data:file/png;base64,{b64}" download="{filename}">Download {filename}</a>'
     return href
+
 # -------------------------
 # Utility Functions
 # -------------------------
