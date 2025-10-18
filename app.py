@@ -121,9 +121,20 @@ def create_comparison_plot(images, titles):
 # -------------------------
 
 def sharpen_laplacian(image):
-    # Apply Laplacian filter for sharpening
+    # Ensure the image is in uint8 format
+    image = np.array(image, dtype=np.uint8)
+    
+    # Apply the Laplacian filter
     laplacian = cv2.Laplacian(image, cv2.CV_64F)
-    return cv2.add(image, laplacian)
+    
+    # Convert the Laplacian result to uint8 for consistent data type
+    laplacian = cv2.convertScaleAbs(laplacian)
+    
+    # Add the Laplacian to the original image
+    sharpened = cv2.add(image, laplacian)
+    
+    return sharpened
+
 
 def sharpen_highpass(image):
     # Apply High-pass filtering
